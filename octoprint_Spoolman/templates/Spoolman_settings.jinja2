@@ -1,4 +1,3 @@
-
 <form
     id="settings_spoolman"
     class="form-horizontal"
@@ -120,6 +119,57 @@
                             <small>
                                 Spools verification displays a modal after clicking the 'Print' button, which presents all necessary info & warnings before the actual print job starts. It allows the user to either confirm (and start the print) or cancel the job. Verification consists of: checking remaining filament, checking spool selection, detecting tools count mismatch (multi-tool printers).
                             </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" for="settings-spoolman-general-useApiKey">
+                        Use API Key for Authentication
+                    </label>
+                    <div class="controls">
+                        <div>
+                            <input
+                                id="settings-spoolman-general-useApiKey"
+                                type="checkbox"
+                                class="text-left"
+                                data-bind="checked: pluginSettings.useApiKey"
+                            >
+                        </div>
+                        <div style="margin-top: 0.25em">
+                            <small>
+                                If enabled, requests to Spoolman will include an API-KEY header for authentication.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group" data-bind="visible: pluginSettings.useApiKey">
+                    <label class="control-label" for="settings-spoolman-general-apiKey">
+                        API Key
+                    </label>
+                    <div class="controls">
+                        <input
+                            id="settings-spoolman-general-apiKey"
+                            type="password"
+                            class="input-xlarge text-left"
+                            data-bind="textInput: pluginSettings.apiKey"
+                            placeholder="Enter your Spoolman API key"
+                        >
+                        <div style="margin-top: 0.25em">
+                            <small>
+                                The API key provided by your Spoolman instance. Leave empty if not required.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Test Connection</label>
+                    <div class="controls">
+                        <button
+                            class="btn btn-primary"
+                            data-bind="click: testConnection, enable: pluginSettings.spoolmanUrl, text: testConnectionText"
+                        ></button>
+                        <div data-bind="visible: testConnectionResult" style="margin-top: 0.5em;">
+                            <span data-bind="text: testConnectionResult, css: { 'text-success': testConnectionSuccess, 'text-error': !testConnectionSuccess }"></span>
                         </div>
                     </div>
                 </div>

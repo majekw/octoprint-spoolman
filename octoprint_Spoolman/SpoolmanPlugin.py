@@ -1,5 +1,6 @@
 import octoprint.plugin
 from octoprint.events import Events
+import flask  # Add this import
 
 from .modules.PluginAPI import PluginAPI
 from .modules.PrinterHandler import PrinterHandler
@@ -42,10 +43,14 @@ class SpoolmanPlugin(
         else:
             verifyConfig = False
 
+        useApiKey = self._settings.get([SettingsKeys.USE_API_KEY])
+        apiKey = self._settings.get([SettingsKeys.API_KEY])
         return SpoolmanConnector(
             instanceUrl = spoolmanInstanceUrl,
             logger = self._logger,
             verifyConfig = verifyConfig,
+            useApiKey = useApiKey,
+            apiKey = apiKey,
         )
 
     def triggerPluginEvent(self, eventType, eventPayload = {}):
@@ -130,6 +135,8 @@ class SpoolmanPlugin(
             SettingsKeys.SHOW_LAST_USED_COLUMN_IN_SPOOL_SELECT_MODAL: True,
             SettingsKeys.SHOW_LOT_NUMBER_IN_SIDE_BAR: False,
             SettingsKeys.SHOW_SPOOL_ID_IN_SIDE_BAR: False,
+            SettingsKeys.USE_API_KEY: False,  # Checkbox: default to disabled
+            SettingsKeys.API_KEY: "",  # Text field: default to empty
         }
 
         return settings
@@ -176,3 +183,9 @@ class SpoolmanPlugin(
                 ]
             }
         }
+
+    @octoprint.plugin.BlueprintPlugin.route("/test_connection", methods=["POST"])
+    def test_connection(self):
+        connector = self.getSpoolmanConnector()
+        result = connector.handleTestConnection()
+        return flask.jsonify(result)

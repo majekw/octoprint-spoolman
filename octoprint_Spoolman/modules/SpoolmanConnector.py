@@ -5,10 +5,12 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 
 class SpoolmanConnector():
-    def __init__(self, instanceUrl, logger, verifyConfig):
+    def __init__(self, instanceUrl, logger, verifyConfig, useApiKey = False, apiKey = ""):
         self.instanceUrl = self._cleanupInstanceUrl(instanceUrl)
         self._logger = logger
         self.verifyConfig = verifyConfig
+        self.useApiKey = useApiKey
+        self.apiKey = apiKey
 
     def _cleanupInstanceUrl(self, value):
         trailingSlash = "/"
@@ -84,6 +86,13 @@ class SpoolmanConnector():
             }
         }
 
+    # Helper to build headers
+    def _buildHeaders(self):
+        headers = {}
+        if self.useApiKey and self.apiKey:
+            headers["API-KEY"] = self.apiKey
+        return headers
+
     def handleGetSpoolsAvailable(self):
         precheckResult = self._precheckSpoolman()
 
@@ -94,8 +103,9 @@ class SpoolmanConnector():
 
         self._logSpoolmanCall(endpointUrl)
 
+        headers = self._buildHeaders()
         try:
-            response = requests.get(endpointUrl, verify = self.verifyConfig)
+            response = requests.get(endpointUrl, verify = self.verifyConfig, headers = headers)
         except Exception as caughtException:
             return self._handleSpoolmanConnectionError(caughtException)
 
@@ -123,6 +133,7 @@ class SpoolmanConnector():
 
         self._logSpoolmanCall(endpointUrl)
 
+        headers = self._buildHeaders()
         try:
             session = requests.Session()
             session.verify = self.verifyConfig
@@ -135,7 +146,8 @@ class SpoolmanConnector():
                 json = {
                     'use_length': spoolUsedLength,
                 },
-                timeout = 1
+                timeout = 1,
+                headers = headers
             )
         except Exception as caughtException:
             return self._handleSpoolmanConnectionError(caughtException)
@@ -163,3 +175,23 @@ class SpoolmanConnector():
         return {
             "data": {}
         }
+
+    def handleTestConnection(self):
+        precheckResult = self._precheckSpoolman()
+        if precheckResult and precheckResult.get('error', False):
+            return precheckResult
+
+        endpointUrl = self._createSpoolmanEndpointUrl("/spool")
+        self._logSpoolmanCall(endpointUrl)
+
+        headers = self._buildHeaders()
+        try:
+            response = requests.get(endpointUrl, verify=self.verifyConfig, headers=headers, timeout=5)  # Short timeout for testing
+        except Exception as caughtException:
+            return self._handleSpoolmanConnectionError(caughtException)
+
+        if response.status_code != 200:
+            return self._handleSpoolmanError(response)
+
+        self._logSpoolmanSuccess(response)
+        return {"data": {"message": "Connection successful"}}
