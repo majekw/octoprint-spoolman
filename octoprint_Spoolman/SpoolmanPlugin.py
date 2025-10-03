@@ -186,6 +186,39 @@ class SpoolmanPlugin(
 
     @octoprint.plugin.BlueprintPlugin.route("/test_connection", methods=["POST"])
     def test_connection(self):
-        connector = self.getSpoolmanConnector()
+        # Get settings from the request body (current dialog values)
+        data = flask.request.get_json()
+        
+        # Use provided settings or fall back to saved settings
+        spoolmanUrl = data.get("spoolmanUrl") if data else self._settings.get([SettingsKeys.SPOOLMAN_URL])
+        useApiKey = data.get("useApiKey", False) if data else self._settings.get([SettingsKeys.USE_API_KEY])
+        apiKey = data.get("apiKey", "") if data else self._settings.get([SettingsKeys.API_KEY])
+        
+        # Build verifyConfig
+        verifyConfig = None
+        if data:
+            isVerifyEnabled = data.get("isSpoolmanCertVerifyEnabled", False)
+            certPath = data.get("spoolmanCertPemPath", "")
+            if isVerifyEnabled and certPath:
+                verifyConfig = certPath
+            elif not isVerifyEnabled:
+                verifyConfig = False
+        else:
+            isVerifyEnabled = self._settings.get([SettingsKeys.IS_SPOOLMAN_CERT_VERIFY_ENABLED])
+            certPath = self._settings.get([SettingsKeys.SPOOLMAN_CERT_PEM_PATH])
+            if isVerifyEnabled and certPath:
+                verifyConfig = certPath
+            elif not isVerifyEnabled:
+                verifyConfig = False
+        
+        # Create a temporary connector with the current settings
+        connector = SpoolmanConnector(
+            instanceUrl=spoolmanUrl,
+            logger=self._logger,
+            verifyConfig=verifyConfig,
+            useApiKey=useApiKey,
+            apiKey=apiKey
+        )
+        
         result = connector.handleTestConnection()
         return flask.jsonify(result)
