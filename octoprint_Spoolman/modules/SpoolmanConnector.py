@@ -90,7 +90,7 @@ class SpoolmanConnector():
     def _buildHeaders(self):
         headers = {}
         if self.useApiKey and self.apiKey:
-            headers["API-KEY"] = self.apiKey
+            headers["X-Api-Key"] = self.apiKey
         return headers
 
     def handleGetSpoolsAvailable(self):
