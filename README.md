@@ -59,7 +59,9 @@ After installing the plugin, you have to set it up, by:
 
 ### Spoolman's setup
 
-![Showcase - Spoolman's setup](./extras/screenshots/showcase__spoolman_setup.png)
+![Showcase - Spoolman's setup (general)](./extras/screenshots/showcase__spoolman_setup_general.png)
+
+![Showcase - Spoolman's setup (display)](./extras/screenshots/showcase__spoolman_setup_display.png)
 
 ## Development
 
