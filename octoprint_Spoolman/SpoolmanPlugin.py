@@ -146,6 +146,13 @@ class SpoolmanPlugin(
 
         octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
 
+    def get_settings_restricted_paths(self):
+        return dict(
+            admin=[
+                ["plugins", "Spoolman", SettingsKeys.API_KEY],
+            ]
+        )
+
     # Event bus
     def register_custom_events(*args, **kwargs):
         return [
@@ -186,38 +193,21 @@ class SpoolmanPlugin(
 
     @octoprint.plugin.BlueprintPlugin.route("/test_connection", methods=["POST"])
     def test_connection(self):
-        # Get settings from the request body (current dialog values)
         data = flask.request.get_json()
         
-        # Use provided settings or fall back to saved settings
-        spoolmanUrl = data.get("spoolmanUrl") if data else self._settings.get([SettingsKeys.SPOOLMAN_URL])
-        useApiKey = data.get("useApiKey", False) if data else self._settings.get([SettingsKeys.USE_API_KEY])
-        apiKey = data.get("apiKey", "") if data else self._settings.get([SettingsKeys.API_KEY])
-        
-        # Build verifyConfig
-        verifyConfig = None
-        if data:
-            isVerifyEnabled = data.get("isSpoolmanCertVerifyEnabled", False)
-            certPath = data.get("spoolmanCertPemPath", "")
-            if isVerifyEnabled and certPath:
-                verifyConfig = certPath
-            elif not isVerifyEnabled:
-                verifyConfig = False
-        else:
-            isVerifyEnabled = self._settings.get([SettingsKeys.IS_SPOOLMAN_CERT_VERIFY_ENABLED])
-            certPath = self._settings.get([SettingsKeys.SPOOLMAN_CERT_PEM_PATH])
-            if isVerifyEnabled and certPath:
-                verifyConfig = certPath
-            elif not isVerifyEnabled:
-                verifyConfig = False
-        
-        # Create a temporary connector with the current settings
+        use_api_key = data.get("useApiKey", self._settings.get([SettingsKeys.USE_API_KEY]))
+        api_key = data.get("apiKey")  # Get API key from request if available
+
+        # If API key is not in the request, fall back to settings for existing configurations
+        if api_key is None:
+            api_key = self._settings.get([SettingsKeys.API_KEY])
+
         connector = SpoolmanConnector(
-            instanceUrl=spoolmanUrl,
+            instanceUrl=data.get("spoolmanUrl", self._settings.get([SettingsKeys.SPOOLMAN_URL])),
             logger=self._logger,
-            verifyConfig=verifyConfig,
-            useApiKey=useApiKey,
-            apiKey=apiKey
+            verifyConfig=data.get("spoolmanCertPemPath") if data.get("isSpoolmanCertVerifyEnabled") else False,
+            useApiKey=use_api_key,
+            apiKey=api_key
         )
         
         result = connector.handleTestConnection()
