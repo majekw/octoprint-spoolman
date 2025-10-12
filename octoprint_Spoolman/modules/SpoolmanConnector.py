@@ -5,12 +5,13 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 
 class SpoolmanConnector():
-    def __init__(self, instanceUrl, logger, verifyConfig, apiKeyHeader = None, apiKey = None):
+    def __init__(self, instanceUrl, logger, verifyConfig, apiKeyHeader = None, apiKey = None, isRetryLogicEnabled = True):
         self.instanceUrl = self._cleanupInstanceUrl(instanceUrl)
         self._logger = logger
         self.verifyConfig = verifyConfig
         self.apiKeyHeader = apiKeyHeader
         self.apiKey = apiKey
+        self.isRetryLogicEnabled = isRetryLogicEnabled
 
     def _cleanupInstanceUrl(self, value):
         trailingSlash = "/"
@@ -137,10 +138,35 @@ class SpoolmanConnector():
 
         self._logSpoolmanCall(endpointUrl)
 
+        connectorLogger = self._logger
+
+        class RetryWithLogger(Retry):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+                lastHistoryItem = self.history[-1] if self.history else None
+                lastStatus = lastHistoryItem.status if lastHistoryItem else None
+                lastError = lastHistoryItem.error if lastHistoryItem else None
+
+                if (lastStatus or lastError) and self.total > 0:
+                    connectorLogger.debug(
+                        "[Spoolman API] retrying request (previous status: %s, error: %s) (retries left: %s)",
+                        lastStatus if lastStatus else "unknown",
+                        lastError if lastError else "unknown",
+                        self.total
+                    )
+
+        retryCount = 1 if not self.isRetryLogicEnabled else 3
+
+        retries = RetryWithLogger(
+            total = retryCount,
+            backoff_factor = 1,
+            status_forcelist = [ 500, 502, 503, 504 ]
+        )
+
         try:
             session = requests.Session()
             session.verify = self.verifyConfig
-            retries = Retry(total = 3, backoff_factor = 1, status_forcelist = [ 500, 502, 503, 504 ])
 
             session.mount(self.instanceUrl, HTTPAdapter(max_retries=retries))
 
